@@ -1,7 +1,8 @@
 #include "../include/DirScanner.h"
-#include "Mylogger.cc"
+#include "../include/Mylogger.h"
 #include <dirent.h>
 #include <stdio.h>
+#include <string.h>
 
 
 
@@ -25,6 +26,10 @@ void DirScanner::traverse(const string &dirName)
     struct dirent *pDirent;
     while (NULL != (pDirent = readdir(fDir)))
     {
+        if (strcmp(pDirent->d_name, ".")==0 || strcmp(pDirent->d_name, "..")==0)
+        {
+            continue;
+        }
         string filePath;
         filePath = dirName + "/" + pDirent->d_name;
         _vecFilesPath.push_back(filePath);

@@ -1,4 +1,4 @@
-INC_DIR:= ./include
+INC_DIR:= ./include ./include/deps
 SRC_DIR:= ./src/*.cc
 DES_DIR:= ./bin
 SRCS:=$(wildcard *.cc $(SRC_DIR))
@@ -7,7 +7,7 @@ LIBS:= -llog4cpp -lpthread -ljson
 
 CXX:=g++
 
-CXXFLAGS:= -w -g $(LIBS)
+CXXFLAGS:= -w -g $(LIBS) $(addprefix -I, $(INC_DIR))
 
 EXE:=./bin/server
 
