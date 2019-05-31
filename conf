@@ -3,6 +3,8 @@ serverPort 2000
 RSSyuliaoPath ../data/RSSyuliao
 stopWord ../data/StopWord
 ripepagePath ../data/Lib/ripepage.lib
+newRipepagePath ../data/Lib/newripepage.lib
 offsetPath ../data/Lib/offset.lib
+newOffsetPath ../data/Lib/newOffset.lib
 threadNum 2
 queueSize 10
