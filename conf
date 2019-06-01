@@ -6,5 +6,6 @@ ripepagePath ../data/Lib/ripepage.lib
 newRipepagePath ../data/Lib/newripepage.lib
 offsetPath ../data/Lib/offset.lib
 newOffsetPath ../data/Lib/newOffset.lib
+invertIndexPath ../data/Lib/invertIndex.lib
 threadNum 2
 queueSize 10
