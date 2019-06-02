@@ -28,7 +28,7 @@ Configuration::Configuration(const string &filepath):_filepath(filepath)
     }
     //读入停用词
     {
-        ifstream ifs(_configMap["stopWord"]);
+        ifstream ifs(_configMap["stopWordPath"]);
         string stopWord;
         while (ifs >> stopWord)
         {

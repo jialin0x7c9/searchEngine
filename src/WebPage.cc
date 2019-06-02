@@ -4,6 +4,8 @@
 #include "deps/cppjieba/Jieba.hpp"
 
 using std::vector;
+using std::endl;
+using std::cout;
 
 using namespace tinyxml2;
 
@@ -37,29 +39,36 @@ void WebPage::processDoc()
     XMLElement* docidNode = rootElement->FirstChildElement("docid");
     XMLElement* urlNode = rootElement->FirstChildElement("url");
     XMLElement* titleNode = rootElement->FirstChildElement("title");
+    XMLElement* contentNode = rootElement->FirstChildElement("content");
     _docid = atoi(docidNode->GetText());
     _docUrl = urlNode->GetText();
-    _docContent = titleNode->GetText();
+    _docTitle = titleNode->GetText();
+    _docContent = contentNode->GetText();
+    /* cout << "----WebPage:----" << endl; */
+    /* cout << "docid =" << _docid << endl; */
+    /* cout << "link =" << _docUrl << endl; */
+    /* cout << "content = " << endl; */
+    /* cout << _docContent << endl; */
     constructWordMap();
 }
 
 void WebPage::constructWordMap()
 {
     vector<string> cutWord;
+    set<string> stopWordList = _conf.getStopWordList();
     //对_docContent进行分词并统计；
     const char* const DICT_PATH = "../include/dict/jieba.dict.utf8";
     const char* const HMM_PATH = "../include/dict/hmm_model.utf8";
-    const char* const USER_DICT_PATH = "../include/dict/user.dict.utf8";
-    cppjieba::Jieba jieba(DICT_PATH,HMM_PATH,USER_DICT_PATH);
-    jieba.CutForSearch(_docContent, cutWord);
+    cppjieba::MixSegment mSeg(DICT_PATH,HMM_PATH);
+    /* cppjieba::Jieba jieba(DICT_PATH,HMM_PATH,USER_DICT_PATH); */
+    /* jieba.CutForSearch(_docContent, cutWord); */
+    mSeg.Cut(_docContent, cutWord);
     for (const auto &i : cutWord)
     {
         //如果是停用词则不加入单词的map里面；
-        if (_conf.getStopWordList().end()!= _conf.getStopWordList().find(i))
+        if (stopWordList.end() == stopWordList.find(i) && i != "\n" && i != " ") 
         {
-            _wordsMap[i]++;
-            std::cout << i << std::endl;
+            ++_wordsMap[i];
         }
     }
-    
 }

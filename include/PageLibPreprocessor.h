@@ -16,12 +16,13 @@ public:
     void doProcess();
 
 private:
+    void storeNewPageAndOffsetOnDisk();
     void readAndCutRedundantPage();
     void buildInvertIndexTable();
     int getRipePageTxt(const string &indexFilePath, const string &filePath, string &txt);
 
     //将去重后的网页库、偏移库、倒排索引表写回磁盘；
-    void storeOnDisk();
+    void storeInvertTableOnDisk();
 private:
     Configuration &_conf;
     map<int, pair<int, int>> _newOffsetLib;

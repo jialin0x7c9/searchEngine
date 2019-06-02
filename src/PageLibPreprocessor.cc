@@ -12,6 +12,7 @@ using std::make_pair;
 using std::endl;
 using std::cout;
 using namespace simhash;
+using std::istreambuf_iterator;
 
 PageLibPreprocessor::PageLibPreprocessor(Configuration &conf):_conf(conf)
 {
@@ -30,6 +31,10 @@ void PageLibPreprocessor::readAndCutRedundantPage()
     ifstream pageIfs(_conf.getConfigMap()["ripepagePath"]);
     ifstream offsetIfs(_conf.getConfigMap()["offsetPath"]);
     string oneLine;
+    istreambuf_iterator<char> begin(pageIfs);
+    istreambuf_iterator<char> end;
+    string wholePage(begin, end);
+
     while(getline(offsetIfs, oneLine))
     {
         istringstream iss(oneLine);
@@ -40,13 +45,18 @@ void PageLibPreprocessor::readAndCutRedundantPage()
         iss >> docid;
         iss >> offset;
         iss >> pageLength;
-        pageIfs.seekg(offset, pageIfs.beg);
-        string txt(pageLength, '\0');
-        pageIfs.read(&txt[0], pageLength);
+        string txt = wholePage.substr(offset, pageLength);
+    /*     pageIfs.seekg(offset, pageIfs.beg); */
+    /*     string txt(pageLength, '\0'); */
+    /*     pageIfs.read(&txt[0], pageLength); */
         //计算simhash
         Simhasher simhasher("../include/dict/jieba.dict.utf8", "../include/dict/hmm_model.utf8", "../include/dict/idf.utf8", "../include/dict/stop_words.utf8");
         uint64_t u64;
+        cout << "----txt------" << endl;
+        cout << txt << endl;
         simhasher.make(txt, 5, u64);
+        cout << "simhash =" << u64 << endl;
+        cout << "----------" << endl;
         for (const auto &i : _vecNewFile)
         {
             //如果相等说明是同一片文章，不写入新索引
@@ -75,7 +85,161 @@ void PageLibPreprocessor::readAndCutRedundantPage()
     /* } */
 }
 
-void PageLibPreprocessor::storeOnDisk()
+void PageLibPreprocessor::storeInvertTableOnDisk()
+{
+
+    string invertTablePath = _conf.getConfigMap()["invertIndexPath"];
+    ofstream invertITOfs(invertTablePath);
+    auto invertTableIt =  _invertIndexTable.begin();
+    while (invertTableIt != _invertIndexTable.end())
+    {
+        string word = invertTableIt->first;
+        invertITOfs << word;
+        invertITOfs << " ";
+        for (auto &wordFreq : invertTableIt->second)
+        {
+            int docid = wordFreq.first;
+            double weight = wordFreq.second;
+            invertITOfs << docid;
+            invertITOfs << " ";
+            invertITOfs << weight;
+            invertITOfs << ",";
+        }
+        invertITOfs.seekp(-1, invertITOfs.cur);
+        invertITOfs << "\n";
+        ++invertTableIt;
+    }
+}
+
+
+void PageLibPreprocessor::buildInvertIndexTable()
+{
+
+    int totalPage = 0;
+    //构造vector<WebPage>
+    vector<WebPage> vecPage;
+    string newPagePath = _conf.getConfigMap()["newRipepagePath"];
+    ifstream ifs(newPagePath);
+    auto it = _newOffsetLib.begin();
+    while(it != _newOffsetLib.end())
+    {
+        int offset = it->second.first;
+        int length = it->second.second;
+        //读出一片文章；
+        string txt(length, '\0');
+        ifs.seekg(offset, ifs.beg);
+        ifs.read(&txt[0], length);
+        /* cout << "------<>txt:" << endl; */
+        /* cout << txt << endl; */
+        //得到了带标签的txt
+        WebPage newWebPage(txt, _conf);
+        vecPage.push_back(newWebPage);
+        it++;
+    }
+    totalPage = vecPage.size();
+    //遍历vector得到unordered_map<string, vector<pair<docid, 词频>>>
+    for (auto &onePage : vecPage) //遍历每一个WebPage，里面有文章的信息；
+    {
+        int docid = onePage.getDocid();
+        const map<string, int>* wordsMap = onePage.getWordsMapPtr();
+        auto it = wordsMap->begin();
+        while(it != wordsMap->end())
+        {
+            string word = it->first;
+            double wordFrequency = it->second;
+            _invertIndexTable[word].push_back(make_pair(docid, wordFrequency));
+            ++it;
+        }
+    }
+
+    //查看unordered_map<string, vector<pair<docid, 词频>>
+    /* { */
+    /*     cout << "------查看docid 和 词频----------" << endl; */
+    /*     auto tableIt = _invertIndexTable.begin(); */
+    /*     while(tableIt !=  _invertIndexTable.end()) */
+    /*     { */
+    /*         string word = tableIt->first; */
+    /*         cout << word; */
+    /*         cout << " "; */
+    /*         for (const auto &i : tableIt->second) */
+    /*         { */
+    /*             cout << i.first; */
+    /*             cout << " "; */
+    /*             cout << i.second; */
+    /*             cout << ","; */
+    /*         } */
+    /*         cout << endl; */
+    /*         ++tableIt; */
+    /*     } */
+    /*     cout << "---------------------------------" << endl; */
+    /* } */
+
+    //遍历一遍_invertIndexTable得到unordered_map<string, vector<pair<docid, 该词在该篇的权重>>>
+    auto tableIt = _invertIndexTable.begin();
+    while(tableIt !=  _invertIndexTable.end())
+    {
+        double totalOccursPage = tableIt->second.size(); //一共有多少篇文章出现了该单词；
+        double idf = log(totalPage/totalOccursPage);
+        for (auto &docFreq : tableIt->second)
+        {
+            //词在该篇的权重 w = tf * idf；(idf = log(N/出现该词的总次数))
+            double timesInOnePage = docFreq.second;
+            double wInOnePage = timesInOnePage * idf; 
+            docFreq.second = wInOnePage;
+        }
+        ++tableIt;
+    }
+    //查看unordered_map<string, vector<pair<docid, 本篇权重>>
+    /* { */
+    /*     cout << "------查看docid 和 本篇权重----------" << endl; */
+    /*     auto tableIt = _invertIndexTable.begin(); */
+    /*     while(tableIt !=  _invertIndexTable.end()) */
+    /*     { */
+    /*         string word = tableIt->first; */
+    /*         cout << word; */
+    /*         cout << " "; */
+    /*         for (const auto &i : tableIt->second) */
+    /*         { */
+    /*             cout << i.first; */
+    /*             cout << " "; */
+    /*             cout << i.second; */
+    /*             cout << ","; */
+    /*         } */
+    /*         cout << endl; */
+    /*         ++tableIt; */
+    /*     } */
+    /*     cout << "---------------------------------" << endl; */
+    /* } */
+
+    //再遍历一遍得到unordered_map<string, vector<pair<docid, 归一化后的权重>>>
+    tableIt = _invertIndexTable.begin();
+    while(tableIt != _invertIndexTable.end())
+    {
+        //计算分母；sqrt(w1^2 + w2^2 +...+ wn^2)
+        double totalWeight = 0;
+        for (auto &docFreq : tableIt->second)
+        {
+            double w = docFreq.second;
+            totalWeight += w*w;
+        }
+        double sqrtTotalWeight = sqrt(totalWeight);
+        //计算归一化后的权重;
+        for (auto &docFreq : tableIt->second)
+        {
+            if (0 == sqrtTotalWeight)
+            {
+                docFreq.second = 0;
+            }
+            else
+            {
+                docFreq.second /= sqrtTotalWeight;
+            }
+        }
+        ++tableIt;
+    }
+}
+
+void PageLibPreprocessor::storeNewPageAndOffsetOnDisk()
 {
     string newRipepagePath = _conf.getConfigMap()["newRipepagePath"];
     string newOffsetPath = _conf.getConfigMap()["newOffsetPath"];
@@ -99,6 +263,7 @@ void PageLibPreprocessor::storeOnDisk()
         offsetOfs << offset;
         offsetOfs << " ";
         offsetOfs << length;
+        offsetOfs << "\n";
 
         //读出一片文章；
         string txt(length, '\0');
@@ -108,106 +273,16 @@ void PageLibPreprocessor::storeOnDisk()
         pageOfs << txt;
         it++;
     }
+    pageOfs.close();
+    offsetOfs.close();
 
-    string invertTablePath = _conf.getConfigMap()["invertIndexPath"];
-    ofstream invertITOfs(invertTablePath);
-    auto invertTableIt =  _invertIndexTable.begin();
-    while (invertTableIt != _invertIndexTable.end())
-    {
-        string word = invertTableIt->first;
-        invertITOfs << word;
-        invertITOfs << " ";
-        for (auto &wordFreq : invertTableIt->second)
-        {
-            int docid = wordFreq.first;
-            double weight = wordFreq.second;
-            invertITOfs << docid;
-            invertITOfs << " ";
-            invertITOfs << weight;
-            invertITOfs << ",";
-        }
-        invertITOfs << "\n";
-    }
-}
-
-
-void PageLibPreprocessor::buildInvertIndexTable()
-{
-
-    int totalPage = 0;
-    //构造vector<WebPage>
-    vector<WebPage> vecPage;
-    string newPagePath = _conf.getConfigMap()["newRipepagePath"];
-    ifstream ifs(newPagePath);
-    auto it = _newOffsetLib.begin();
-    while(it != _newOffsetLib.end())
-    {
-        int offset = it->second.first;
-        int length = it->second.second;
-        //读出一片文章；
-        string txt(length, '\0');
-        ifs.seekg(offset, ifs.beg);
-        ifs.read(&txt[0], length);
-        //得到了带标签的txt
-        WebPage newWebPage(txt, _conf);
-        vecPage.push_back(newWebPage);
-        it++;
-    }
-    totalPage = vecPage.size();
-    //遍历vector得到unordered_map<string, vector<pair<docid, 词频>>>
-    for (auto &i : vecPage) //遍历每一个WebPage，里面有文章的信息；
-    {
-        int docid = i.getDocid();
-        const map<string, int>* wordsMap = i.getWordsMapPtr();
-        auto it = wordsMap->begin();
-        while(it != wordsMap->end())
-        {
-            string word = it->first;
-            double wordFrequency = it->second;
-            _invertIndexTable[word].push_back(make_pair(docid, wordFrequency));
-        }
-    }
-    //遍历一遍_invertIndexTable得到unordered_map<string, vector<pair<docid, 该词在该篇的权重>>>
-    auto tableIt = _invertIndexTable.begin();
-    while(tableIt !=  _invertIndexTable.end())
-    {
-        double totalOccursPage = tableIt->second.size(); //一共有多少篇文章出现了该单词；
-        double idf = log(totalPage)/log(totalOccursPage);
-        for (auto &docFreq : tableIt->second)
-        {
-            //词在该篇的权重 w = tf * idf；(idf = log(N/出现该词的总次数))
-            double timesInOnePage = docFreq.second;
-            double wInOnePage = timesInOnePage * idf; 
-            docFreq.second = wInOnePage;
-        }
-        ++tableIt;
-    }
-
-    //再遍历一遍得到unordered_map<string, vector<pair<docid, 归一化后的权重>>>
-    tableIt = _invertIndexTable.begin();
-    while(tableIt != _invertIndexTable.end())
-    {
-        //计算分母；sqrt(w1^2 + w2^2 +...+ wn^2)
-        double totalWeight = 0;
-        for (auto &docFreq : tableIt->second)
-        {
-            double w = docFreq.second;
-            totalWeight += w*w;
-        }
-        double sqrtTotalWeight = sqrt(totalWeight);
-        //计算归一化后的权重;
-        for (auto &docFreq : tableIt->second)
-        {
-            docFreq.second /= sqrtTotalWeight;
-        }
-        ++tableIt;
-    }
 }
 
 void PageLibPreprocessor::doProcess()
 {
     readAndCutRedundantPage();
-    buildInvertIndexTable();
-    storeOnDisk();
+    storeNewPageAndOffsetOnDisk();
+    /* buildInvertIndexTable(); */
+    /* storeInvertTableOnDisk(); */
 }
 
