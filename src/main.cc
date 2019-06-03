@@ -2,6 +2,7 @@
 //#include "../include/DirScanner.h"
 //#include "../include/PageLib.h"
 
+#include "WordQueryServer.h"
 #include "Configuration.h"
 #include "DirScanner.h"
 #include "PageLib.h"
@@ -27,7 +28,8 @@ int main()
     //offlien---------------------------------------
     
     //online
-
+    WordQueryServer wServer(conf);
+    wServer.start();
     return 0;
 }
 
