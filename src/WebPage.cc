@@ -1,22 +1,49 @@
 #include <vector>
-#include "WebPage.h"
 #include "tinyxml2.h"
+#include "WebPage.h"
 #include "deps/cppjieba/Jieba.hpp"
 
 using std::vector;
 using std::endl;
 using std::cout;
 
+using namespace simhash;
 using namespace tinyxml2;
 
-WebPage::WebPage(string &doc, Configuration &conf): _conf(conf), _doc(doc)
+WebPage::WebPage(string &doc, int offset, Configuration &conf): 
+    _conf(conf),
+    _doc(doc),
+    _offset(offset)
 {
     processDoc();
 }
+void WebPage::calSimhash()
+{
+    Simhasher simhasher("../include/dict/jieba.dict.utf8", "../include/dict/hmm_model.utf8", "../include/dict/idf.utf8", "../include/dict/stop_words.utf8");
+    /* cout << "----------cal simHash Content--------" << endl; */
+    /* cout << _docContent << endl; */
+    simhasher.make(_docContent, 15, _u64);
+    /* cout << _u64 << endl; */
+    /* cout << "------------------- " << endl; */
+}
 
+uint64_t WebPage::getSimhash()
+{
+    return _u64;
+}
 int WebPage::getDocid() const
 {
     return _docid;
+}
+
+int WebPage::getOffset() const
+{
+    return _offset;
+}
+
+int WebPage::getLength() const 
+{
+    return _doc.length();
 }
 
 string WebPage::getContent() const
@@ -36,6 +63,10 @@ void WebPage::processDoc()
     XMLDocument *myDocument = new XMLDocument();
     myDocument->Parse(_doc.c_str());
     XMLElement* rootElement = myDocument->RootElement();
+    if (rootElement == NULL)
+    {
+        cout << "NULL" << endl;
+    }
     XMLElement* docidNode = rootElement->FirstChildElement("docid");
     XMLElement* urlNode = rootElement->FirstChildElement("url");
     XMLElement* titleNode = rootElement->FirstChildElement("title");

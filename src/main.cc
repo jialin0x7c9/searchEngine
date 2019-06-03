@@ -17,13 +17,16 @@ int main()
 {
     string confPath("../conf");
     Configuration conf(confPath);
+    //offline--------------------------------------
     /* DirScanner dirScanner(conf); */
     /* PageLib pageLib(conf, dirScanner); */
     /* pageLib.create(); */
     /* pageLib.store(); */
-
-    PageLibPreprocessor preProcess(conf);
-    preProcess.doProcess();
+    /* PageLibPreprocessor preProcess(conf); */
+    /* preProcess.doProcess(); */
+    //offlien---------------------------------------
+    
+    //online
 
     return 0;
 }

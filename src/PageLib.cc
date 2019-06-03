@@ -78,7 +78,7 @@ void PageLib::create()
             ss << docid;
             ss >> sdocid;
             string cont(content);
-            regex re("<.*?>");
+            regex re("<[^>]*>");
             string editContent = std::regex_replace(cont, re, string(""));
             string txt = 
                 "<doc>\n\t<docid>" + sdocid + "</docid>\n" 
