@@ -1,9 +1,9 @@
-#include "../include/PageLib.h"
-#include "../include/tinyxml2.h"
+#include "PageLib.h"
+#include "tinyxml2.h"
 #include <regex>
 #include <fstream>
 #include <sstream>
-#include "../include/Mylogger.h"
+#include "Mylogger.h"
 using std::stringstream;
 using namespace tinyxml2;
 using std::ofstream;

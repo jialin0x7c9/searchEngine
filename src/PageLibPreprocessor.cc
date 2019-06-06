@@ -12,6 +12,8 @@ using std::endl;
 using std::cout;
 using std::istreambuf_iterator;
 
+
+
 PageLibPreprocessor::PageLibPreprocessor(Configuration &conf):_conf(conf)
 {
 }
@@ -35,7 +37,7 @@ void PageLibPreprocessor::storeInvertTableOnDisk()
             invertITOfs << docid;
             invertITOfs << " ";
             invertITOfs << weight;
-            invertITOfs << ",";
+            invertITOfs << " ";
         }
         invertITOfs.seekp(-1, invertITOfs.cur);
         invertITOfs << "\n";
@@ -69,7 +71,7 @@ void PageLibPreprocessor::buildInvertIndexTable()
     //得到一个vector<WebPage>
     int totalPage = 0;
     _vecPage.clear();
-    ifstream pageIfs(_conf.getConfigMap()["ripepagePath"]);
+    ifstream pageIfs(_conf.getConfigMap()["newRipepagePath"]);
     ifstream offsetIfs(_conf.getConfigMap()["newOffsetPath"]);
     istreambuf_iterator<char> begin(pageIfs);
     istreambuf_iterator<char> end;
@@ -85,7 +87,9 @@ void PageLibPreprocessor::buildInvertIndexTable()
         iss >> offset;
         iss >> pageLength;
         string txt = wholePage.substr(offset, pageLength);
-        WebPage newWebPage(txt, offset, _conf);
+        WebPage newWebPage(txt, offset);
+        newWebPage.processDoc();
+        newWebPage.constructWordMap(_conf);
         _vecPage.push_back(newWebPage);
     }
 
@@ -194,6 +198,7 @@ void PageLibPreprocessor::buildInvertIndexTable()
 
 void PageLibPreprocessor::storeNewPageAndOffsetOnDisk()
 {
+    cout << "Begin newPageAndOffset store." << endl;
     string newRipepagePath = _conf.getConfigMap()["newRipepagePath"];
     string newOffsetPath = _conf.getConfigMap()["newOffsetPath"];
     string oldRipepagePath = _conf.getConfigMap()["ripepagePath"];
@@ -203,31 +208,43 @@ void PageLibPreprocessor::storeNewPageAndOffsetOnDisk()
     ofstream pageOfs(newRipepagePath);
     ifstream oldPageIfs(oldRipepagePath);
 
+    int pos = 0;
     while(it != _newOffsetLib.end())
     {
         int docid = it->first;
         int offset = it->second.first;
         int length = it->second.second;
         //docid 可以直接写入newOffsetPath
-        offsetOfs << docid;
-        offsetOfs << " ";
+        /* offsetOfs << docid; */
+        /* offsetOfs << " "; */
         
         //写offset和length的时候可以获得文章写入新的ripePage
-        offsetOfs << offset;
-        offsetOfs << " ";
-        offsetOfs << length;
-        offsetOfs << "\n";
+        /* offsetOfs << offset; */
+        /* offsetOfs << " "; */
+        /* offsetOfs << length; */
+        /* offsetOfs << "\n"; */
 
         //读出一片文章；
         string txt(length, '\0');
         oldPageIfs.seekg(offset, oldPageIfs.beg);
         oldPageIfs.read(&txt[0], length);
-
         pageOfs << txt;
+        cout << "Finish Store docid= " << docid << endl;
+        //写入newOffset.lib
+        offsetOfs << docid;
+        offsetOfs << " ";
+        offsetOfs << pos;
+        offsetOfs << " ";
+        offsetOfs << length;
+        offsetOfs << "\n";
+        pos += length;
+
         it++;
     }
     pageOfs.close();
     offsetOfs.close();
+    oldPageIfs.close();
+    cout << "NewPageAndOffset store Complete." << endl;
 
 }
 
@@ -249,7 +266,10 @@ void PageLibPreprocessor::readPageFromFile()
         iss >> offset;
         iss >> pageLength;
         string txt = wholePage.substr(offset, pageLength);
-        WebPage newWebPage(txt, offset, _conf);
+        //WebPage不需要统计单词和词频;
+        //但是要去标签；
+        WebPage newWebPage(txt, offset);
+        newWebPage.processDoc();
         cout << "finish WebPage: " << docid << endl;
         _vecPage.push_back(newWebPage);
     }
@@ -262,6 +282,7 @@ void PageLibPreprocessor::cutRedundantPage()
     for (auto &onePage : _vecPage)
     {
         onePage.calSimhash();
+        cout << "calSimhas docid =" << onePage.getDocid() << endl; 
     }
     //然后遍历vector将simhash放入一个新的vector内如果放的进则构建新索引
     vector<uint64_t> vecSimhash;
@@ -271,7 +292,7 @@ void PageLibPreprocessor::cutRedundantPage()
         bool isSamePage = false;
         for (const auto &i : vecSimhash)
         {
-            if (Simhasher::isEqual(u64, i))
+            if (simhash::Simhasher::isEqual(u64, i))
             {
                 cout << u64 << " and " << i << " is same" << endl;
                 isSamePage = true;
@@ -290,11 +311,11 @@ void PageLibPreprocessor::cutRedundantPage()
 void PageLibPreprocessor::doProcess()
 {
     //通过旧的offset将每篇文章构建一个WebPage存在vector内
-    readPageFromFile();
+    /* readPageFromFile(); */
     //遍历_vecPage将不多余的的WebPage组成_newOffsetLib；
-    cutRedundantPage();
+    /* cutRedundantPage(); */
     //通过_newOffsetLib和旧的ripePage来存；
-    storeNewPageAndOffsetOnDisk();
+    /* storeNewPageAndOffsetOnDisk(); */
 
     buildInvertIndexTable();
     storeInvertTableOnDisk();

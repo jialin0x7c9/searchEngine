@@ -58,12 +58,26 @@ int sendCycle(int clientSocketFd, char *train, int sendLen)
 
 int SocketIO::writen(const char * buff, int len)
 {
+    std::cout << buff << std::endl;
     train sendTrain;
     memset(&sendTrain, 0, sizeof(train));
-    sendTrain.dataLen = len;
-    memcpy(sendTrain.data, buff, sendTrain.dataLen);
-    int ret = sendCycle(_fd, (char*)&sendTrain, 4+sendTrain.dataLen);
-    return ret;
+    /* sendTrain.dataLen = len; */
+    /* std::cout << "len= " << len << std::endl; */
+    /* memcpy(sendTrain.data, buff, sendTrain.dataLen); */
+    /* int ret = sendCycle(_fd, (char*)&sendTrain, 4+sendTrain.dataLen); */
+
+    off_t ptrPos = 0;
+    while (ptrPos + 1024 < len)
+    {
+        memcpy(sendTrain.data, buff+ptrPos, 1024);
+        sendTrain.dataLen = 1024;
+        sendCycle(_fd, (char*)&sendTrain, 4+sendTrain.dataLen);
+        ptrPos += 1024;
+    }
+    sendTrain.dataLen = len - ptrPos;
+    memcpy(sendTrain.data, buff+ptrPos, sendTrain.dataLen);
+    sendCycle(_fd, (char*)&sendTrain, 4+sendTrain.dataLen);
+    return 0;
     /* int left = len; */
     /* const char * p = buff; */
     /* while (left > 0) */

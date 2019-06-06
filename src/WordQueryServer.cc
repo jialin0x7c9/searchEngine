@@ -6,6 +6,7 @@ using std::endl;
 
 WordQueryServer::WordQueryServer(Configuration & conf):
     _conf(conf),
+    _wordQuery(_conf),
     _tcpServer(_conf.getConfigMap()["serverIp"],atoi(_conf.getConfigMap()["serverPort"].c_str())),
     _threadpool(atoi(_conf.getConfigMap()["threadNum"].c_str()),atoi(_conf.getConfigMap()["queueSize"].c_str()))
 {
@@ -21,6 +22,15 @@ void WordQueryServer::onMessage(const shared_ptr<wd::TcpConnection> & conn)
     /* cout << "onMessage...." << endl; */
     string msg = conn->receive();
     cout << ">> receive msg from client: " << msg << endl;
+    _threadpool.addTask(std::bind(&WordQueryServer::doTaskThread, this, conn, msg));
+}
+
+void WordQueryServer::doTaskThread(const shared_ptr<wd::TcpConnection> & conn, const string &msg)
+{
+    string ret = _wordQuery.doQuery(msg);
+    /* cout << "Search Result :" << endl; */
+    /* cout << ret << endl; */
+    conn->sendInLoop(ret);
 }
 
 void WordQueryServer::onClose(const shared_ptr<wd::TcpConnection> & conn)

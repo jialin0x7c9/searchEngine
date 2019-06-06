@@ -1,25 +1,73 @@
-#include <vector>
-#include "tinyxml2.h"
 #include "WebPage.h"
+#include <vector>
+#include <sstream>
+#include "tinyxml2.h"
 #include "deps/cppjieba/Jieba.hpp"
 
 using std::vector;
 using std::endl;
 using std::cout;
+using std::istringstream;
 
-using namespace simhash;
 using namespace tinyxml2;
 
-WebPage::WebPage(string &doc, int offset, Configuration &conf): 
-    _conf(conf),
+WebPage::WebPage(string &doc, int offset): 
     _doc(doc),
     _offset(offset)
 {
-    processDoc();
+    /* processDoc(); */
 }
+
+WebPage::WebPage(string content):
+    _docContent(content)
+{
+
+}
+
+string WebPage::getTitle() const
+{
+    return _docTitle;
+}
+
+string WebPage::summary(const vector<string> &queryWords)
+{
+    vector<string> summaryVec;
+    istringstream iss(_docContent);
+    string line;
+    while(iss >> line)
+    {
+        for (auto word : queryWords)
+        {
+            //如果某行有这个单词，则保存这个行；
+            if (line.find(word) != string::npos)
+            {
+                summaryVec.push_back(line);
+                break;
+            }
+        }
+
+        if (summaryVec.size() >= 5)
+        {
+            break;
+        }
+    }
+
+    string summary;
+    for (auto line : summaryVec)
+    {
+        summary.append(line).append("\n");
+    }
+    return summary;
+}
+
+string WebPage::getUrl() const
+{
+    return _docUrl;
+}
+
 void WebPage::calSimhash()
 {
-    Simhasher simhasher("../include/dict/jieba.dict.utf8", "../include/dict/hmm_model.utf8", "../include/dict/idf.utf8", "../include/dict/stop_words.utf8");
+    simhash::Simhasher simhasher("../include/dict/jieba.dict.utf8", "../include/dict/hmm_model.utf8", "../include/dict/idf.utf8", "../include/dict/stop_words.utf8");
     /* cout << "----------cal simHash Content--------" << endl; */
     /* cout << _docContent << endl; */
     simhasher.make(_docContent, 15, _u64);
@@ -80,13 +128,12 @@ void WebPage::processDoc()
     /* cout << "link =" << _docUrl << endl; */
     /* cout << "content = " << endl; */
     /* cout << _docContent << endl; */
-    constructWordMap();
 }
 
-void WebPage::constructWordMap()
+void WebPage::constructWordMap(Configuration &conf)
 {
     vector<string> cutWord;
-    set<string> stopWordList = _conf.getStopWordList();
+    set<string> stopWordList = conf.getStopWordList();
     //对_docContent进行分词并统计；
     const char* const DICT_PATH = "../include/dict/jieba.dict.utf8";
     const char* const HMM_PATH = "../include/dict/hmm_model.utf8";

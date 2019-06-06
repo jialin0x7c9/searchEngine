@@ -29,6 +29,7 @@ int main()
     
     //online
     WordQueryServer wServer(conf);
+    /* cout << "start()" << endl; */
     wServer.start();
     return 0;
 }

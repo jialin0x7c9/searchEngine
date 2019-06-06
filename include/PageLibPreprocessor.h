@@ -1,23 +1,20 @@
 #ifndef __PAGELIBPREPROCESSOR_H__
 #define __PAGELIBPREPROCESSOR_H__
 #include "Configuration.h"
-#include <vector>
 #include "WebPage.h"
-#include "simhash/Simhasher.hpp"
 
-//因为在"simhash/Simhasher.hpp"里面包含了所以会出现error 具体原因还不知如何排除；
-using std::unordered_map;
+#include <vector>
+
+//因为在"simhash/Simhasher.hpp"里面include了unordered_map
+//而且在std做了不知道什么事情；所以不能直接using std::unordered_map
 using std::vector;
 using std::pair;
-using namespace simhash;
 
-class WebPage;
 class PageLibPreprocessor
 {
 public:
     PageLibPreprocessor(Configuration &conf);
     void doProcess();
-
 private:
     void readPageFromFile();
     void cutRedundantPage();
@@ -36,7 +33,6 @@ private:
     //docid offset length
     map<int, pair<int, int>> _newOffsetLib;
     //词语，docid, weight
-    unordered_map<string, vector<pair<int, double>>> _invertIndexTable;
+    std::unordered_map<string, vector<pair<int, double>>> _invertIndexTable;
 };
-
 #endif

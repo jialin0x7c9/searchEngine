@@ -1,29 +1,34 @@
 #ifndef __WEBPAGE_H__
 #define __WEBPAGE_H__
 #include "Configuration.h"
+#include "simhash/Simhasher.hpp"
 #include <string>
 #include <map>
-#include "simhash/Simhasher.hpp"
+#include <vector>
 using std::map;
 using std::string;
+using std::vector;
 
 class WebPage
 {
 public:
-    WebPage(string &doc, int offset, Configuration &conf);
+    WebPage() {}
+    WebPage(string &doc, int offset);
+    WebPage(string content);
     int getDocid() const;
     string getContent() const;
+    string getTitle() const; 
+    string getUrl() const;
     map<string, int>* getWordsMapPtr();
     void calSimhash();
     uint64_t getSimhash();
     int getOffset() const;
     int getLength() const;
-
-private:
+    void constructWordMap(Configuration &conf);
     void processDoc();
-    void constructWordMap();
+    string summary(const vector<string> &queryWords);
 private:
-    Configuration &_conf; //用来获得停用词:
+    /* Configuration &_conf; //用来获得停用词: */
     string _doc; //包含标签的
     int _docid;
     int _offset;

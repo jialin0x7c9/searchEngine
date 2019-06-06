@@ -1,5 +1,5 @@
-#include "../include/Configuration.h"
-#include "../include/Mylogger.h"
+#include "Configuration.h"
+#include "Mylogger.h"
 #include <fstream>
 #include <sstream>
 
@@ -35,6 +35,8 @@ Configuration::Configuration(const string &filepath):_filepath(filepath)
             _stopWordList.insert(stopWord);
         }
     }
+    ifs.close();
+
 }
 
 set<string> Configuration::getStopWordList()
@@ -46,4 +48,3 @@ map<string, string>& Configuration::getConfigMap()
 {
     return _configMap;
 }
-
