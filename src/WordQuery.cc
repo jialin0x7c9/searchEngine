@@ -48,7 +48,7 @@ struct SimilarityCompare
 
 
 
-WordQuery::WordQuery(Configuration &conf):_conf(conf)
+WordQuery::WordQuery(Configuration &conf):_conf(conf), _redisCache(_conf)
 {
     loadLibrary();
 }
@@ -162,6 +162,14 @@ vector<double> WordQuery::getQueryWordsWeightVector(map<string, int> &mapWordFre
 
 string WordQuery::doQuery(const string &msg)
 {
+    //查询redis有的话直接得到Json格式的字符串返回
+    string result;
+    if (_redisCache.getValue(msg, result))
+    {
+        cout << msg << "-->Find in Redis Cache" << endl;
+        return result;
+    }
+
     //每个元素: docid 和包含关键字的向量值
     vector<pair<int, vector<double>>> vecAllVector;
     //基向量
@@ -213,7 +221,9 @@ string WordQuery::doQuery(const string &msg)
         {
             docidVec.push_back(item.first);
         }
-        return createJson(docidVec, baseWord);
+        result = createJson(docidVec, baseWord);
+        _redisCache.set(msg, result);
+        return result;
     }
     else
     {

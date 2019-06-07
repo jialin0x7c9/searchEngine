@@ -3,7 +3,7 @@ SRC_DIR:= ./src/*.cc
 DES_DIR:= ./bin
 SRCS:=$(wildcard *.cc $(SRC_DIR))
 OBJS:=$(patsubst %.cc, %.o, $(SRCS))
-LIBS:= -llog4cpp -lpthread -ljson
+LIBS:= -llog4cpp -lpthread -ljson -lhiredis
 
 CXX:=g++
 

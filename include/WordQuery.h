@@ -1,6 +1,7 @@
 #ifndef __WORDQUERY_H__
 #define __WORDQUERY_H__
 #include "WebPage.h"
+#include "RedisCache.h"
 #include <vector>
 #include <string>
 #include <map>
@@ -26,6 +27,7 @@ private:
     string returnNoAnswer();
 private:
     Configuration &_conf;
+    RedisCache _redisCache;
     std::unordered_map<int, WebPage> _pageLib;
     map<int, pair<int, int>> _offsetLib;
     std::unordered_map<string, vector<pair<int, double>>> _invertIndexTable;
